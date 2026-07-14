@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ruleta Tiny Desk</title>
+    <title>Ruleta</title>
     <style>
         * {
             box-sizing: border-box;
@@ -134,7 +134,7 @@
 </head>
 <body>
 
-    <h1 id="status">SISTEMA DE SORTEO</h1>
+    <h1 id="status">VELTIS TINY DESK</h1>
     <p style="color: #888; font-family: sans-serif; margin-bottom: 20px;">Preparando selección...</p>
 
     <div class="viewport">
@@ -145,30 +145,32 @@
     <button id="btn" class="btn" onclick="spin()">¡GIRAR RULETA!</button>
 
     <script>
-        // 1. LISTA VISUAL: Cómo se ven ordenados en la pantalla
+        // 1. LISTA VISUAL: Agregamos la propiedad 'audio' con el nombre del archivo mp3
         const movies = [
-            { name: "Bad Bunny", img: "badbunny.jpg" },
-            { name: "Shakira", img: "shakira.jpg" },
-            { name: "Los Bunkers", img: "bunkers.jpg" }, 
-            { name: "31 minutos", img: "31.png" },
-            { name: "Michel Jackson", img: "MJ.jpg" },
-            { name: "Soda stereo", img: "soda.jpg" },
-            { name: "Chayanne", img: "chayanne.jpg" }
+            { name: "Bad Bunny", img: "badbunny.jpg", audio: "badbunny.mp3" },
+            { name: "31 minutos", img: "31.jpg", audio: "31.mp3" },
+            { name: "Los Bunkers", img: "bunkers.jpg", audio: "bunkers.mp3" }, 
+            { name: "Shakira", img: "shakira.jpg", audio: "avatar.mp3" },
+            { name: "Chayanne", img: "chayanne.jpg", audio: "batman.mp3" },
+            { name: "Michael Jackson", img: "MJ.jpg", audio: "jurassic.mp3" },
+            { name: "Soda Stereo", img: "soda.jpg", audio: "reyleon.mp3" }
         ];
 
-        // 2. LA TRAMPA: El orden exacto en el que quieres que ganen
-        // Escribe los nombres EXACTAMENTE IGUAL que arriba
+        // 2. EL ORDEN SECRETO
         const ordenDeGanadores = [
-            "Bad Bunny",     // 1er Giro
-            "31 minutos",        // 2do Giro
-            "Los Bunkers",   // 3er Giro
-            "Shakira",     // 4to Giro
-            "Soda Stereo",        // 5to Giro
-            "Michael Jackson", // 6to Giro
-            "Chayanne"    // 7mo Giro
+            "Bad Bunny",
+            "31 minutos",
+            "Los Bunkers",
+            "Shakira",
+            "Chayanne",
+            "Michael Jackson",
+            "Soda Stereo"
         ];
 
         let turnoActual = 0;
+        let audioActual = null; // Guardará el reproductor de música activo
+        let timeoutAudio = null; // Guardará el temporizador de 10 segundos
+
         const rail = document.getElementById('rail');
         const btn = document.getElementById('btn');
         const status = document.getElementById('status');
@@ -207,7 +209,13 @@
                 return;
             }
 
-            // Identificar quién debe ganar en este turno según la lista secreta
+            // Si hay un audio sonando del turno anterior, lo detenemos
+            if (audioActual) {
+                audioActual.pause();
+                audioActual.currentTime = 0;
+                clearTimeout(timeoutAudio);
+            }
+
             const nombreGanador = ordenDeGanadores[turnoActual];
             const winnerIdx = movies.findIndex(m => m.name === nombreGanador);
 
@@ -236,13 +244,27 @@
                 if(winnerEl) {
                     winnerEl.classList.add('winner');
                     status.innerText = "¡GANADOR: " + nombreGanador + "!";
+                    
+                    // --- LÓGICA DE AUDIO AQUÍ ---
+                    const rutaAudio = movies[winnerIdx].audio;
+                    if(rutaAudio) {
+                        audioActual = new Audio(rutaAudio);
+                        audioActual.play().catch(e => console.log("Error al reproducir audio:", e));
+                        
+                        // Detener la canción a los 10 segundos exactos (10000 milisegundos)
+                        timeoutAudio = setTimeout(() => {
+                            if (audioActual) {
+                                audioActual.pause();
+                            }
+                        }, 10000);
+                    }
                 }
 
                 setTimeout(() => {
                     document.querySelectorAll(`.poster-container[data-index="${winnerIdx}"]`)
                             .forEach(p => p.classList.add('blocked'));
                     btn.disabled = false;
-                    turnoActual++; // Avanzamos al siguiente en la lista secreta
+                    turnoActual++; 
                 }, 1000);
 
             }, 3600);
