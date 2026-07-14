@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ruleta</title>
+    <title>Ruleta </title>
     <style>
         :root {
             --theme-color: #FFCC00; 
             --bg: #111111; 
-            --w: 200px;
-            --h: 300px;
-            --gap: 15px;
+            --w: 200px; /* Ancho de la foto */
+            --h: 300px; /* Alto de la foto */
+            --gap: 15px; /* Espacio entre fotos */
         }
 
         body {
@@ -125,23 +125,13 @@
             transition: transform 0.2s, background 0.2s;
         }
 
-        .btn:hover {
-            transform: scale(1.05);
-            background: #ffe066;
-        }
-
-        .btn:disabled { 
-            background: #333; 
-            color: #666;
-            cursor: not-allowed; 
-            box-shadow: none; 
-            transform: none;
-        }
+        .btn:hover { transform: scale(1.05); background: #ffe066; }
+        .btn:disabled { background: #333; color: #666; cursor: not-allowed; box-shadow: none; transform: none; }
     </style>
 </head>
 <body>
 
-    <h1 id="status">SISTEMA DE SORTEO</h1>
+    <h1 id="status">Ruleta Tiny Desk</h1>
     <p style="color: #888; font-family: sans-serif; margin-bottom: 20px;">Preparando selección...</p>
 
     <div class="viewport">
@@ -152,55 +142,57 @@
     <button id="btn" class="btn" onclick="spin()">¡GIRAR RULETA!</button>
 
     <script>
-        // EL ORDEN AQUÍ ES EL ORDEN EN EL QUE GANARÁN:
+        // ¡YA NO NECESITAS PONER IDs! 
+        // El código respetará automáticamente el orden de arriba hacia abajo.
         const movies = [
-            { id: 0, name: "Bad Bunny", img: "badbunny.jpg" },       
-            { id: 1, name: "31 minutos", img: "31.png" },           
-            { id: 2, name: "Michael Jackson", img: "MJ.jpg" },    
-            { id: 3, name: "Shakira", img: "shakira.jpg" }, 
-            { id: 4, name: "Los 3", img: "los3.jpg" },         
-            { id: 5, name: "Los Bunkers", img: "bunkers.jpg" },         
-            { id: 6, name: "Soda Stereo", img: "soda.jpg" },
-            
+            { name: "Bad Bunny", img: "badbunny.jpg" }, // Ganará 1ro
+            { name: "31 minutos", img: "31.png" }, // Ganará 2do
+            { name: "Shakira", img: "shakira.jpg" }, // Ganará 3ro
+            { name: "Michael Jackson", img: "MJ.jpg" },
+            { name: "Chayanne", img: "chayanne.jpg" },
+            { name: "Los 3", img: "los3.jpg" },
+            { name: "Soda Stereo", img: "soda.jpg" }
         ];
 
-        let blockedIds = [];
+        let blockedIndices = [];
         const rail = document.getElementById('rail');
         const btn = document.getElementById('btn');
         const status = document.getElementById('status');
         
-        const step = 215; 
-        const copies = 20; // <-- CORRECCIÓN: Subimos esto a 20 para que NUNCA se quede sin imágenes.
-        const spinLoops = 5; // Cuántas vueltas completas dará antes de frenar
+        const step = 215; // 200 de ancho + 15 de gap
+        const copies = 20; 
+        const spinLoops = 5; 
+
+        // Fórmula matemática exacta para centrar cualquier elemento
+        function getOffsetForIndex(globalIndex) {
+            return -(globalIndex * step + 100); 
+        }
 
         function init() {
             let content = "";
             for(let i = 0; i < copies; i++) {
-                movies.forEach(m => {
+                movies.forEach((m, idx) => {
                     content += `
-                        <div class="poster-container" data-id="${m.id}" data-name="${m.name}">
+                        <div class="poster-container" data-index="${idx}">
                             <span>${m.name}</span>
                             <img src="${m.img}" draggable="false" onerror="this.style.display='none'">
                         </div>`;
                 });
             }
             rail.innerHTML = content;
-            resetToCenter();
-        }
-
-        function resetToCenter() {
+            
+            // Posicionar la ruleta en el centro de forma invisible al cargar
             rail.style.transition = "none";
-            const centerIdx = Math.floor(copies / 2) * movies.length;
-            const offset = -(centerIdx * step) - (step / 2);
-            rail.style.transform = `translateX(${offset}px)`;
-            return offset;
+            const centerGlobalIdx = Math.floor(copies / 2) * movies.length;
+            rail.style.transform = `translateX(${getOffsetForIndex(centerGlobalIdx)}px)`;
         }
 
         function spin() {
-            const available = movies.filter(m => !blockedIds.includes(m.id));
+            // TRAMPA: Busca el primer elemento que NO esté bloqueado
+            const winnerIdx = movies.findIndex((m, i) => !blockedIndices.includes(i));
             
-            if (available.length === 0) {
-                status.innerText = "¡TODAS COMPLETADAS!";
+            if (winnerIdx === -1) {
+                status.innerText = "¡TODOS COMPLETADOS!";
                 return;
             }
 
@@ -209,39 +201,40 @@
             
             document.querySelectorAll('.poster-container').forEach(p => p.classList.remove('winner'));
 
-            const currentPos = resetToCenter();
-            rail.offsetHeight; 
-
-            // LA TRAMPA: Siempre elige el primero disponible
-            const winnerObj = available[0]; 
-            const winnerIdx = movies.findIndex(m => m.id === winnerObj.id);
+            // 1. Resetear posición al centro sin que se note para tener pista infinita
+            rail.style.transition = "none";
+            const centerSet = Math.floor(copies / 2);
+            const centerGlobalIdx = centerSet * movies.length;
+            rail.style.transform = `translateX(${getOffsetForIndex(centerGlobalIdx)}px)`;
             
-            // CORRECCIÓN MATEMÁTICA: Aseguramos que frene exactamente en la posición correcta
-            const distance = ((movies.length * spinLoops) + winnerIdx) * step;
-            const finalPos = currentPos - distance;
+            rail.offsetHeight; // Forzar al navegador a aplicar el reseteo antes de girar
 
-            // Animación
-            rail.style.transition = "transform 2.5s cubic-bezier(0.1, 0, 0.1, 1)";
+            // 2. Calcular la posición final de la ganadora
+            const targetGlobalIdx = (centerSet + spinLoops) * movies.length + winnerIdx;
+            const finalPos = getOffsetForIndex(targetGlobalIdx);
+
+            // 3. ¡Girar!
+            rail.style.transition = "transform 3.5s cubic-bezier(0.15, 0, 0.05, 1)";
             rail.style.transform = `translateX(${finalPos}px)`;
 
             setTimeout(() => {
-                const centerIdx = Math.floor(copies / 2) * movies.length;
-                const globalWinnerIdx = centerIdx + (movies.length * spinLoops) + winnerIdx;
-                const winnerEl = document.querySelectorAll('.poster-container')[globalWinnerIdx];
+                // 4. Seleccionar exactamente el elemento que está en el centro
+                const allPosters = document.querySelectorAll('.poster-container');
+                const winnerEl = allPosters[targetGlobalIdx];
 
                 if(winnerEl) {
                     winnerEl.classList.add('winner');
-                    status.innerText = "GANADOR: " + winnerObj.name;
-                    blockedIds.push(winnerObj.id);
+                    status.innerText = "¡GANADOR: " + movies[winnerIdx].name + "!";
+                    blockedIndices.push(winnerIdx); // Lo bloqueamos para la siguiente ronda
                 }
 
                 setTimeout(() => {
-                    document.querySelectorAll(`.poster-container[data-id="${winnerObj.id}"]`)
+                    document.querySelectorAll(`.poster-container[data-index="${winnerIdx}"]`)
                             .forEach(p => p.classList.add('blocked'));
                     btn.disabled = false;
-                }, 800);
+                }, 1000);
 
-            }, 2600);
+            }, 3600);
         }
 
         init();
